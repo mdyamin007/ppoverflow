@@ -1,0 +1,71 @@
+version: "3.8"
+
+networks:
+  ppoverflow-network:
+    driver: bridge
+
+services:
+  frontend:
+    image: ppoverflow/frontend:dev
+    build:
+      context: client
+      args:
+        - PUBLIC_API_ENDPOINT=${PUBLIC_API_ENDPOINT}
+    ports:
+      - 80:80
+    restart: always
+    networks: 
+      - ppoverflow-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "2"
+    environment:
+      PUBLIC_API_ENDPOINT: ${PUBLIC_API_ENDPOINT}
+
+
+  backend:
+    image: ppoverflow/backend:dev
+    build:
+      context: server
+    ports:
+      - 5000:5000
+    restart: always
+    networks: 
+      - ppoverflow-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "2"
+    depends_on:
+      - mongodb
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongodb:27017/ppoverflow
+      AUTH_EMAIL: ${AUTH_EMAIL}
+      AUTH_PASS: ${AUTH_PASS}
+
+  
+  mongodb:
+    image: mongo:7.0.2-jammy
+    ports:
+      - 27017:27017
+    restart: always
+    networks: 
+      - ppoverflow-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "2"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: ppoverflow
+      MONGO_USER: ${MONGO_USERNAME}
+      MONGO_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./data:/data:rw
